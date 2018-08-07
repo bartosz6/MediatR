@@ -1,5 +1,3 @@
-using System.Threading;
-
 namespace MediatR.Tests
 {
     using System;
@@ -7,239 +5,140 @@ namespace MediatR.Tests
     using Shouldly;
     using StructureMap;
     using Xunit;
+    using DummyClasses;
 
     public class ExceptionTests
     {
-        private readonly IMediator _mediator;
+        protected IMediator Mediator;
 
-        public class Ping : IRequest<Pong>
+        public class HandlerNotRegistered : ExceptionTests
         {
-        }
-
-        public class Pong
-        {
-        }
-
-        public class VoidPing : IRequest
-        {
-        }
-
-        public class Pinged : INotification
-        {
-        }
-
-        public class AsyncPing : IRequest<Pong>
-        {
-        }
-
-        public class AsyncVoidPing : IRequest
-        {
-        }
-
-        public class AsyncPinged : INotification
-        {
-        }
-
-        public class NullPing : IRequest<Pong>
-        {
-        }
-
-        public class VoidNullPing : IRequest
-        {
-        }
-
-        public class NullPinged : INotification
-        {
-        }
-
-        public class NullPingHandler : IRequestHandler<NullPing, Pong>
-        {
-            public Task<Pong> Handle(NullPing request, CancellationToken cancellationToken)
+            public HandlerNotRegistered()
             {
-                return Task.FromResult(new Pong());
-            }
-        }
-
-        public class VoidNullPingHandler : IRequestHandler<VoidNullPing, Unit>
-        {
-            public Task<Unit> Handle(VoidNullPing request, CancellationToken cancellationToken)
-            {
-                return Unit.Task;
-            }
-        }
-
-        public ExceptionTests()
-        {
-            var container = new Container(cfg =>
-            {
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => ctx.GetInstance);
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            _mediator = container.GetInstance<IMediator>();
-        }
-
-        [Fact]
-        public async Task Should_throw_for_send()
-        {
-            await Should.ThrowAsync<InvalidOperationException>(async () => await _mediator.Send(new Ping()));
-        }
-
-        [Fact]
-        public async Task Should_throw_for_void_send()
-        {
-            await Should.ThrowAsync<InvalidOperationException>(async () => await _mediator.Send(new VoidPing()));
-        }
-
-        [Fact]
-        public async Task Should_not_throw_for_publish()
-        {
-            Exception ex = null;
-            try
-            {
-                await _mediator.Publish(new Pinged());
-            }
-            catch (Exception e)
-            {
-                ex = e;
-            }
-            ex.ShouldBeNull();
-        }
-
-        [Fact]
-        public async Task Should_throw_for_async_send()
-        {
-            await Should.ThrowAsync<InvalidOperationException>(async () => await _mediator.Send(new AsyncPing()));
-        }
-
-        [Fact]
-        public async Task Should_throw_for_async_void_send()
-        {
-            await Should.ThrowAsync<InvalidOperationException>(async () => await _mediator.Send(new AsyncVoidPing()));
-        }
-
-        [Fact]
-        public async Task Should_not_throw_for_async_publish()
-        {
-            Exception ex = null;
-            try
-            {
-                await _mediator.Publish(new AsyncPinged());
-            }
-            catch (Exception e)
-            {
-                ex = e;
-            }
-            ex.ShouldBeNull();
-        }
-
-        [Fact]
-        public async Task Should_throw_argument_exception_for_send_when_request_is_null()
-        {
-            var container = new Container(cfg =>
-            {
-                cfg.Scan(scanner =>
+                var container = new Container(cfg =>
                 {
-                    scanner.AssemblyContainingType(typeof(NullPing));
-                    scanner.IncludeNamespaceContainingType<Ping>();
-                    scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
+                    cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => ctx.GetInstance);
+                    cfg.For<IMediator>().Use<Mediator>();
                 });
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            var mediator = container.GetInstance<IMediator>();
+                Mediator = container.GetInstance<IMediator>();
+            }
 
-            NullPing request = null;
+            [Fact]
+            public async Task Should_throw_for_send()
+            {
+                await Should.ThrowAsync<InvalidOperationException>(async () => await Mediator.Send(new Ping()));
+            }
 
-            await Should.ThrowAsync<ArgumentNullException>(async () => await mediator.Send(request));
+            [Fact]
+            public async Task Should_throw_for_void_send()
+            {
+                await Should.ThrowAsync<InvalidOperationException>(async () => await Mediator.Send(new VoidPing()));
+            }
+
+            [Fact]
+            public async Task Should_not_throw_for_publish()
+            {
+                Exception ex = null;
+                try
+                {
+                    await Mediator.Publish(new Pinged());
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+
+                ex.ShouldBeNull();
+            }
+
+            [Fact]
+            public async Task Should_throw_for_async_send()
+            {
+                await Should.ThrowAsync<InvalidOperationException>(async () => await Mediator.Send(new AsyncPing()));
+            }
+
+            [Fact]
+            public async Task Should_throw_for_async_void_send()
+            {
+                await Should.ThrowAsync<InvalidOperationException>(
+                    async () => await Mediator.Send(new AsyncVoidPing()));
+            }
+
+            [Fact]
+            public async Task Should_not_throw_for_async_publish()
+            {
+                Exception ex = null;
+                try
+                {
+                    await Mediator.Publish(new AsyncPinged());
+                }
+                catch (Exception e)
+                {
+                    ex = e;
+                }
+
+                ex.ShouldBeNull();
+            }
         }
 
-        [Fact]
-        public async Task Should_throw_argument_exception_for_void_send_when_request_is_null()
+        public class ArgumentValidation : ExceptionTests
         {
-            var container = new Container(cfg =>
+            public ArgumentValidation()
             {
-                cfg.Scan(scanner =>
+                var container = new Container(cfg =>
                 {
-                    scanner.AssemblyContainingType(typeof(VoidNullPing));
-                    scanner.IncludeNamespaceContainingType<Ping>();
-                    scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
+                    cfg.Scan(scanner =>
+                    {
+                        scanner.AssemblyContainingType(typeof(NullPing));
+                        scanner.IncludeNamespaceContainingType<Ping>();
+                        scanner.WithDefaultConventions();
+                        scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
+                    });
+                    cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => ctx.GetInstance);
+                    cfg.For<IMediator>().Use<Mediator>();
                 });
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            var mediator = container.GetInstance<IMediator>();
+                Mediator = container.GetInstance<IMediator>();
+            }
 
-            VoidNullPing request = null;
-
-            await Should.ThrowAsync<ArgumentNullException>(async () => await mediator.Send(request));
-        }
-
-        [Fact]
-        public async Task Should_throw_argument_exception_for_publish_when_request_is_null()
-        {
-            var container = new Container(cfg =>
+            [Fact]
+            public async Task Should_throw_argument_exception_for_send_when_request_is_null()
             {
-                cfg.Scan(scanner =>
-                {
-                    scanner.AssemblyContainingType(typeof(NullPinged));
-                    scanner.IncludeNamespaceContainingType<Ping>();
-                    scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
-                });
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            var mediator = container.GetInstance<IMediator>();
+                NullPing request = null;
 
-            NullPinged notification = null;
+                await Should.ThrowAsync<ArgumentNullException>(async () => await Mediator.Send(request));
+            }
 
-            await Should.ThrowAsync<ArgumentNullException>(async () => await mediator.Publish(notification));
-        }
-
-        [Fact]
-        public async Task Should_throw_argument_exception_for_publish_when_request_is_null_object()
-        {
-            var container = new Container(cfg =>
+            [Fact]
+            public async Task Should_throw_argument_exception_for_void_send_when_request_is_null()
             {
-                cfg.Scan(scanner =>
-                {
-                    scanner.AssemblyContainingType(typeof(NullPinged));
-                    scanner.IncludeNamespaceContainingType<Ping>();
-                    scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
-                });
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            var mediator = container.GetInstance<IMediator>();
+                VoidNullPing request = null;
 
-            object notification = null;
+                await Should.ThrowAsync<ArgumentNullException>(async () => await Mediator.Send(request));
+            }
 
-            await Should.ThrowAsync<ArgumentNullException>(async () => await mediator.Publish(notification));
-        }
-
-        [Fact]
-        public async Task Should_throw_argument_exception_for_publish_when_request_is_not_notification()
-        {
-            var container = new Container(cfg =>
+            [Fact]
+            public async Task Should_throw_argument_exception_for_publish_when_request_is_null()
             {
-                cfg.Scan(scanner =>
-                {
-                    scanner.AssemblyContainingType(typeof(NullPinged));
-                    scanner.IncludeNamespaceContainingType<Ping>();
-                    scanner.WithDefaultConventions();
-                    scanner.AddAllTypesOf(typeof(IRequestHandler<,>));
-                });
-                cfg.For<ServiceFactory>().Use<ServiceFactory>(ctx => t => ctx.GetInstance(t));
-                cfg.For<IMediator>().Use<Mediator>();
-            });
-            var mediator = container.GetInstance<IMediator>();
+                NullPinged notification = null;
 
-            object notification = "totally not notification";
+                await Should.ThrowAsync<ArgumentNullException>(async () => await Mediator.Publish(notification));
+            }
 
-            await Should.ThrowAsync<ArgumentException>(async () => await mediator.Publish(notification));
+            [Fact]
+            public async Task Should_throw_argument_exception_for_publish_when_request_is_null_object()
+            {
+                object notification = null;
+
+                await Should.ThrowAsync<ArgumentNullException>(async () => await Mediator.Publish(notification));
+            }
+
+            [Fact]
+            public async Task Should_throw_argument_exception_for_publish_when_request_is_not_notification()
+            {
+                object notification = "totally not notification";
+
+                await Should.ThrowAsync<ArgumentException>(async () => await Mediator.Publish(notification));
+            }
         }
     }
 }
