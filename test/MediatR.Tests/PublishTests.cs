@@ -78,6 +78,7 @@ namespace MediatR.Tests
             result.ShouldContain("Ping Pung");
         }
 
+        [Fact]
         public async Task Should_resolve_main_handler_when_object_is_passed()
         {
             var builder = new StringBuilder();
@@ -114,11 +115,11 @@ namespace MediatR.Tests
             {
             }
 
-            protected override async Task PublishCore(IEnumerable<Task> allHandlers)
+            protected override async Task PublishCore(IEnumerable<Func<Task>> allHandlers)
             {
                 foreach (var handler in allHandlers)
                 {
-                    await handler;
+                    await handler().ConfigureAwait(false);
                 }
             }
         }
